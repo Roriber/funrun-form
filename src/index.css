@@ -1,0 +1,44 @@
+/* Clean light theme reset (fixes Vite dark styles) */
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+body {
+  background: #f3effb;
+  color: #202124;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* Remove Vite template centering */
+#root {
+  padding: 0;
+}
+
+/* Inputs look normal/light */
+input, textarea, select, button {
+  font: inherit;
+  color: inherit;
+}
+
+input, textarea, select {
+  background: #fff;
+  color: #202124;
+}
+
+button {
+  cursor: pointer;
+}
+
+.dpWrap { width: 100%; }
+
+.dpInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+}
