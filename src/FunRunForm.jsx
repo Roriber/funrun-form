@@ -7,7 +7,7 @@ const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || ""; // optional
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 
-// ✅ categories/sections (display -> value for sheet tab)
+// ✅ GROUP/SECTION (same values as before so your Apps Script routing still works)
 const CATEGORY_OPTIONS = [
   { label: "MEC", value: "MEC" },
   { label: "LGU", value: "LGU" },
@@ -17,6 +17,13 @@ const CATEGORY_OPTIONS = [
   { label: "DepEd", value: "DEPED" },
   { label: "PNP", value: "PNP" },
   { label: "Other", value: "OTHER" },
+];
+
+// ✅ NEW: RUN CATEGORY / DISTANCE (with colors)
+const DISTANCE_OPTIONS = [
+  { label: "3KM", value: "3KM", color: "#188038" }, // green
+  { label: "5KM", value: "5KM", color: "#1a73e8" }, // blue
+  { label: "10KM", value: "10KM", color: "#d93025" }, // red
 ];
 
 function fileToBase64(file) {
@@ -38,9 +45,12 @@ export default function FunRunForm() {
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
 
-  // ✅ category fields
-  const [categoryBase, setCategoryBase] = useState(""); // MEC/LGU/TOWN CENTER/.../OTHER
-  const [categoryOther, setCategoryOther] = useState(""); // only if OTHER
+  // ✅ Group/Section fields (still named categoryBase/categoryOther for backend compatibility)
+  const [categoryBase, setCategoryBase] = useState("");
+  const [categoryOther, setCategoryOther] = useState("");
+
+  // ✅ NEW: Distance
+  const [distance, setDistance] = useState("");
 
   // ✅ Main contact
   const [contactNumber, setContactNumber] = useState("");
@@ -90,13 +100,14 @@ export default function FunRunForm() {
     setAge("");
     setAddress("");
 
-    // ✅ clear category
     setCategoryBase("");
     setCategoryOther("");
 
+    // ✅ reset distance
+    setDistance("");
+
     setContactNumber("");
 
-    // ✅ clear emergency contact
     setEmergencyName("");
     setEmergencyContactNumber("");
 
@@ -104,7 +115,6 @@ export default function FunRunForm() {
     setOtherSize("");
     setPaymentFile(null);
 
-    // ✅ IMPORTANT: clear real file input value (so you can upload again without refresh)
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -113,7 +123,7 @@ export default function FunRunForm() {
     return otherSize.trim() ? `OTHER: ${otherSize.trim()}` : "OTHER";
   }, [shirtSize, otherSize]);
 
-  // ✅ for display only (optional)
+  // ✅ for display/log only (optional)
   const categoryDisplay = useMemo(() => {
     if (categoryBase !== "OTHER") return categoryBase;
     return categoryOther.trim() ? `OTHER: ${categoryOther.trim()}` : "OTHER";
@@ -121,7 +131,7 @@ export default function FunRunForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    closeModal(); // hide any old modal
+    closeModal();
 
     if (!GAS_URL) return notifyError("Missing VITE_GAS_URL in your .env file.");
     if (!dateObj) return notifyError("Please choose a date.");
@@ -132,11 +142,14 @@ export default function FunRunForm() {
     if (!String(age).trim()) return notifyError("Please enter your age.");
     if (!address.trim()) return notifyError("Please enter your address.");
 
-    // ✅ Category validation
-    if (!categoryBase) return notifyError("Please select your Category / Section.");
+    // ✅ Group/Section validation
+    if (!categoryBase) return notifyError("Please select your Group / Section.");
     if (categoryBase === "OTHER" && !categoryOther.trim()) {
-      return notifyError("Please type your Category / Section in 'Other'.");
+      return notifyError("Please type your Group / Section in 'Other'.");
     }
+
+    // ✅ NEW: Distance validation
+    if (!distance) return notifyError("Please select your Run Category (3KM / 5KM / 10KM).");
 
     // ✅ Contact number validation (numbers only, 10–15)
     const cleanContact = contactNumber.replace(/\D/g, "");
@@ -149,14 +162,12 @@ export default function FunRunForm() {
     const emName = emergencyName.trim();
     const cleanEmergency = emergencyContactNumber.replace(/\D/g, "");
 
-    // If one is filled, require the other
     if ((emName && !cleanEmergency) || (!emName && cleanEmergency)) {
       return notifyError(
         "Please provide BOTH Emergency Name and Emergency Contact Number (or leave both blank)."
       );
     }
 
-    // Validate emergency number only if provided
     if (cleanEmergency && (cleanEmergency.length < 10 || cleanEmergency.length > 15)) {
       return notifyError("Emergency contact number must be 10–15 digits.");
     }
@@ -177,7 +188,6 @@ export default function FunRunForm() {
     try {
       const base64 = await fileToBase64(paymentFile);
 
-      // ✅ IMPORTANT: Send base + other separately so Apps Script can route to the correct sheet tab
       const payload = {
         secret: FORM_SECRET,
         date,
@@ -185,17 +195,16 @@ export default function FunRunForm() {
         age: String(age).trim(),
         address: address.trim(),
 
-        // ✅ category routing fields
-        categoryBase, // e.g. "MEC" | "LGU" | "TOWN CENTER" | "OTHER"
-        categoryOther: categoryOther.trim(), // only if OTHER
+        // ✅ group routing fields (backend-compatible)
+        categoryBase,
+        categoryOther: categoryOther.trim(),
+        categoryDisplay,
 
-        // ✅ optional: keep for logs
-        categoryDisplay, // e.g. "OTHER: Student"
+        // ✅ NEW: distance
+        distance, // "3KM" | "5KM" | "10KM"
 
-        // ✅ send cleaned numbers
         contactNumber: cleanContact,
 
-        // ✅ emergency fields
         emergencyName: emName,
         emergencyContactNumber: cleanEmergency,
 
@@ -229,9 +238,7 @@ export default function FunRunForm() {
         <div style={styles.header}>
           {/* ✅ DO NOT REMOVE TITLE */}
           <h2 style={styles.title}>Batik Inarom Mapandan 2026</h2>
-          <p style={styles.subtitle}>
-            Please fill out the form. Fields marked * are required.
-          </p>
+          <p style={styles.subtitle}>Please fill out the form. Fields marked * are required.</p>
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -251,20 +258,20 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          {/* ✅ Category/Section */}
-          <Field label="Category / Section" required>
+          {/* ✅ RENAMED label: Group / Section (still uses categoryBase internally) */}
+          <Field label="Group / Organization" required>
             <div style={styles.inputWrap}>
               <select
                 value={categoryBase}
                 onChange={(e) => {
                   const v = e.target.value;
                   setCategoryBase(v);
-                  if (v !== "OTHER") setCategoryOther(""); // clear if not OTHER
+                  if (v !== "OTHER") setCategoryOther("");
                 }}
                 style={styles.input}
               >
                 <option value="" disabled>
-                  Select a section...
+                  Select a group...
                 </option>
 
                 {CATEGORY_OPTIONS.map((c) => (
@@ -281,10 +288,54 @@ export default function FunRunForm() {
                   value={categoryOther}
                   onChange={(e) => setCategoryOther(e.target.value)}
                   style={styles.input}
-                  placeholder="Type your category (e.g. Student, BFP, etc.)"
+                  placeholder="Type your group (e.g. Student, BFP, etc.)"
                 />
               </div>
             )}
+          </Field>
+
+          {/* ✅ NEW: Run Category / Distance (colored) */}
+          <Field label="Category" required helper="Select: 3KM (Green), 5KM (Blue), 10KM (Red)">
+            <div style={styles.radioGroup}>
+              {DISTANCE_OPTIONS.map((d) => {
+                const checked = distance === d.value;
+
+                return (
+                  <label
+                    key={d.value}
+                    style={{
+                      ...styles.radioRow,
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      border: `2px solid ${checked ? d.color : "#dadce0"}`,
+                      background: checked ? `${d.color}1A` : "transparent",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="distance"
+                      value={d.value}
+                      checked={checked}
+                      onChange={() => setDistance(d.value)}
+                    />
+
+                    <span
+                      style={{
+                        marginLeft: 10,
+                        fontWeight: 800,
+                        color: d.color,
+                        padding: "4px 10px",
+                        borderRadius: 999,
+                        border: `1px solid ${d.color}`,
+                        background: `${d.color}14`,
+                      }}
+                    >
+                      {d.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </Field>
 
           <Field label="Name" required>
@@ -337,7 +388,6 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          {/* ✅ Emergency Contact Section */}
           <Field label="In Case of Emergency: Name (Optional)">
             <div style={styles.inputWrap}>
               <input
@@ -356,9 +406,7 @@ export default function FunRunForm() {
             <div style={styles.inputWrap}>
               <input
                 value={emergencyContactNumber}
-                onChange={(e) =>
-                  setEmergencyContactNumber(e.target.value.replace(/\D/g, ""))
-                }
+                onChange={(e) => setEmergencyContactNumber(e.target.value.replace(/\D/g, ""))}
                 style={styles.input}
                 placeholder="e.g. 09123456789"
                 inputMode="numeric"
@@ -377,9 +425,7 @@ export default function FunRunForm() {
                     checked={shirtSize === s}
                     onChange={() => setShirtSize(s)}
                   />
-                  <span style={{ marginLeft: 8 }}>
-                    {s === "OTHER" ? "Other:" : s}
-                  </span>
+                  <span style={{ marginLeft: 8 }}>{s === "OTHER" ? "Other:" : s}</span>
 
                   {s === "OTHER" && shirtSize === "OTHER" && (
                     <input
@@ -429,7 +475,6 @@ export default function FunRunForm() {
         </form>
       </div>
 
-      {/* ✅ MODAL */}
       {modalOpen && (
         <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -446,11 +491,8 @@ export default function FunRunForm() {
 
                 <button
                   onClick={() => {
-                    if (modalType === "success") {
-                      setModalStep("askAgain");
-                    } else {
-                      closeModal();
-                    }
+                    if (modalType === "success") setModalStep("askAgain");
+                    else closeModal();
                   }}
                   style={{
                     ...styles.button,
@@ -506,7 +548,6 @@ function Field({ label, required, children, helper }) {
         <div style={styles.label}>{label}</div>
         {required && <span style={styles.req}>*</span>}
       </div>
-
       {children}
       {helper && <div style={styles.helper}>{helper}</div>}
     </div>
