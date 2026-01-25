@@ -7,6 +7,18 @@ const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || ""; // optional
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 
+// ✅ NEW: categories/sections
+const CATEGORIES = [
+  "MEC",
+  "LGU",
+  "Town Center",
+  "Zumbanatics",
+  "Barangay",
+  "DepEd",
+  "PNP",
+  "Other",
+];
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -25,6 +37,10 @@ export default function FunRunForm() {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
+
+  // ✅ NEW: category
+  const [category, setCategory] = useState("");
+  const [otherCategory, setOtherCategory] = useState("");
 
   // ✅ Main contact
   const [contactNumber, setContactNumber] = useState("");
@@ -75,6 +91,10 @@ export default function FunRunForm() {
     setAge("");
     setAddress("");
 
+    // ✅ clear category
+    setCategory("");
+    setOtherCategory("");
+
     setContactNumber("");
 
     // ✅ clear emergency contact
@@ -94,6 +114,12 @@ export default function FunRunForm() {
     return otherSize.trim() ? `OTHER: ${otherSize.trim()}` : "OTHER";
   }, [shirtSize, otherSize]);
 
+  // ✅ NEW: final category string
+  const finalCategory = useMemo(() => {
+    if (category !== "Other") return category;
+    return otherCategory.trim() ? `OTHER: ${otherCategory.trim()}` : "OTHER";
+  }, [category, otherCategory]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     closeModal(); // hide any old modal
@@ -106,6 +132,12 @@ export default function FunRunForm() {
     if (!name.trim()) return notifyError("Please enter your name.");
     if (!String(age).trim()) return notifyError("Please enter your age.");
     if (!address.trim()) return notifyError("Please enter your address.");
+
+    // ✅ NEW: category validation
+    if (!category) return notifyError("Please select your Category / Section.");
+    if (category === "Other" && !otherCategory.trim()) {
+      return notifyError("Please type your Category / Section in 'Other'.");
+    }
 
     // ✅ Contact number validation (numbers only, 10–15)
     const cleanContact = contactNumber.replace(/\D/g, "");
@@ -152,6 +184,9 @@ export default function FunRunForm() {
         name: name.trim(),
         age: String(age).trim(),
         address: address.trim(),
+
+        // ✅ NEW: include category
+        category: finalCategory,
 
         // ✅ send cleaned numbers
         contactNumber: cleanContact,
@@ -210,6 +245,37 @@ export default function FunRunForm() {
               />
               <span style={{ color: "#5f6368" }}>📅</span>
             </div>
+          </Field>
+
+          {/* ✅ NEW: Category/Section */}
+          <Field label="Category / Section" required>
+            <div style={styles.inputWrap}>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                style={styles.input}
+              >
+                <option value="" disabled>
+                  Select a section...
+                </option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {category === "Other" && (
+              <div style={{ ...styles.inputWrap, marginTop: 10 }}>
+                <input
+                  value={otherCategory}
+                  onChange={(e) => setOtherCategory(e.target.value)}
+                  style={styles.input}
+                  placeholder="Type your category (e.g. School Club, BFP, etc.)"
+                />
+              </div>
+            )}
           </Field>
 
           <Field label="Name" required>
@@ -328,9 +394,7 @@ export default function FunRunForm() {
               <div style={styles.uploadLeft}>
                 <div style={styles.uploadTitle}>Payment proof</div>
                 <div style={styles.uploadSub}>
-                  {paymentFile
-                    ? `Selected: ${paymentFile.name}`
-                    : "No file selected"}
+                  {paymentFile ? `Selected: ${paymentFile.name}` : "No file selected"}
                 </div>
               </div>
 
