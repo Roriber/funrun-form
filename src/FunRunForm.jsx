@@ -7,16 +7,16 @@ const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || ""; // optional
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 
-// ✅ NEW: categories/sections
-const CATEGORIES = [
-  "MEC",
-  "LGU",
-  "Town Center",
-  "Zumbanatics",
-  "Barangay",
-  "DepEd",
-  "PNP",
-  "Other",
+// ✅ categories/sections (display -> value for sheet tab)
+const CATEGORY_OPTIONS = [
+  { label: "MEC", value: "MEC" },
+  { label: "LGU", value: "LGU" },
+  { label: "Town Center", value: "TOWN CENTER" },
+  { label: "Zumbanatics", value: "ZUMBANATICS" },
+  { label: "Barangay", value: "BARANGAY" },
+  { label: "DepEd", value: "DEPED" },
+  { label: "PNP", value: "PNP" },
+  { label: "Other", value: "OTHER" },
 ];
 
 function fileToBase64(file) {
@@ -38,9 +38,9 @@ export default function FunRunForm() {
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
 
-  // ✅ NEW: category
-  const [category, setCategory] = useState("");
-  const [otherCategory, setOtherCategory] = useState("");
+  // ✅ category fields
+  const [categoryBase, setCategoryBase] = useState(""); // MEC/LGU/TOWN CENTER/.../OTHER
+  const [categoryOther, setCategoryOther] = useState(""); // only if OTHER
 
   // ✅ Main contact
   const [contactNumber, setContactNumber] = useState("");
@@ -54,7 +54,6 @@ export default function FunRunForm() {
   const [paymentFile, setPaymentFile] = useState(null);
 
   const isMobile = window.matchMedia("(max-width: 640px)").matches;
-
   const [loading, setLoading] = useState(false);
 
   // ✅ file input ref (fix upload bug without refresh)
@@ -92,8 +91,8 @@ export default function FunRunForm() {
     setAddress("");
 
     // ✅ clear category
-    setCategory("");
-    setOtherCategory("");
+    setCategoryBase("");
+    setCategoryOther("");
 
     setContactNumber("");
 
@@ -114,11 +113,11 @@ export default function FunRunForm() {
     return otherSize.trim() ? `OTHER: ${otherSize.trim()}` : "OTHER";
   }, [shirtSize, otherSize]);
 
-  // ✅ NEW: final category string
-  const finalCategory = useMemo(() => {
-    if (category !== "Other") return category;
-    return otherCategory.trim() ? `OTHER: ${otherCategory.trim()}` : "OTHER";
-  }, [category, otherCategory]);
+  // ✅ for display only (optional)
+  const categoryDisplay = useMemo(() => {
+    if (categoryBase !== "OTHER") return categoryBase;
+    return categoryOther.trim() ? `OTHER: ${categoryOther.trim()}` : "OTHER";
+  }, [categoryBase, categoryOther]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -133,9 +132,9 @@ export default function FunRunForm() {
     if (!String(age).trim()) return notifyError("Please enter your age.");
     if (!address.trim()) return notifyError("Please enter your address.");
 
-    // ✅ NEW: category validation
-    if (!category) return notifyError("Please select your Category / Section.");
-    if (category === "Other" && !otherCategory.trim()) {
+    // ✅ Category validation
+    if (!categoryBase) return notifyError("Please select your Category / Section.");
+    if (categoryBase === "OTHER" && !categoryOther.trim()) {
       return notifyError("Please type your Category / Section in 'Other'.");
     }
 
@@ -178,6 +177,7 @@ export default function FunRunForm() {
     try {
       const base64 = await fileToBase64(paymentFile);
 
+      // ✅ IMPORTANT: Send base + other separately so Apps Script can route to the correct sheet tab
       const payload = {
         secret: FORM_SECRET,
         date,
@@ -185,8 +185,12 @@ export default function FunRunForm() {
         age: String(age).trim(),
         address: address.trim(),
 
-        // ✅ NEW: include category
-        category: finalCategory,
+        // ✅ category routing fields
+        categoryBase, // e.g. "MEC" | "LGU" | "TOWN CENTER" | "OTHER"
+        categoryOther: categoryOther.trim(), // only if OTHER
+
+        // ✅ optional: keep for logs
+        categoryDisplay, // e.g. "OTHER: Student"
 
         // ✅ send cleaned numbers
         contactNumber: cleanContact,
@@ -247,32 +251,37 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          {/* ✅ NEW: Category/Section */}
+          {/* ✅ Category/Section */}
           <Field label="Category / Section" required>
             <div style={styles.inputWrap}>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={categoryBase}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setCategoryBase(v);
+                  if (v !== "OTHER") setCategoryOther(""); // clear if not OTHER
+                }}
                 style={styles.input}
               >
                 <option value="" disabled>
                   Select a section...
                 </option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
                   </option>
                 ))}
               </select>
             </div>
 
-            {category === "Other" && (
+            {categoryBase === "OTHER" && (
               <div style={{ ...styles.inputWrap, marginTop: 10 }}>
                 <input
-                  value={otherCategory}
-                  onChange={(e) => setOtherCategory(e.target.value)}
+                  value={categoryOther}
+                  onChange={(e) => setCategoryOther(e.target.value)}
                   style={styles.input}
-                  placeholder="Type your category (e.g. School Club, BFP, etc.)"
+                  placeholder="Type your category (e.g. Student, BFP, etc.)"
                 />
               </div>
             )}
@@ -499,7 +508,6 @@ function Field({ label, required, children, helper }) {
       </div>
 
       {children}
-
       {helper && <div style={styles.helper}>{helper}</div>}
     </div>
   );
