@@ -26,9 +26,12 @@ export default function FunRunForm() {
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
 
-  // ✅ NEW: contact numbers
+  // ✅ Main contact
   const [contactNumber, setContactNumber] = useState("");
-  const [altContactNumber, setAltContactNumber] = useState("");
+
+  // ✅ Emergency contact
+  const [emergencyName, setEmergencyName] = useState("");
+  const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
 
   const [shirtSize, setShirtSize] = useState("");
   const [otherSize, setOtherSize] = useState("");
@@ -72,9 +75,11 @@ export default function FunRunForm() {
     setAge("");
     setAddress("");
 
-    // ✅ NEW: clear contact numbers
     setContactNumber("");
-    setAltContactNumber("");
+
+    // ✅ clear emergency contact
+    setEmergencyName("");
+    setEmergencyContactNumber("");
 
     setShirtSize("");
     setOtherSize("");
@@ -102,8 +107,28 @@ export default function FunRunForm() {
     if (!String(age).trim()) return notifyError("Please enter your age.");
     if (!address.trim()) return notifyError("Please enter your address.");
 
-    // ✅ NEW: validate required contact number
-    if (!contactNumber.trim()) return notifyError("Please enter your contact number.");
+    // ✅ Contact number validation (numbers only, 10–15)
+    const cleanContact = contactNumber.replace(/\D/g, "");
+    if (!cleanContact) return notifyError("Please enter your contact number.");
+    if (cleanContact.length < 10 || cleanContact.length > 15) {
+      return notifyError("Contact number must be 10–15 digits.");
+    }
+
+    // ✅ Emergency number validation (numbers only, optional)
+    const emName = emergencyName.trim();
+    const cleanEmergency = emergencyContactNumber.replace(/\D/g, "");
+
+    // If one is filled, require the other
+    if ((emName && !cleanEmergency) || (!emName && cleanEmergency)) {
+      return notifyError(
+        "Please provide BOTH Emergency Name and Emergency Contact Number (or leave both blank)."
+      );
+    }
+
+    // Validate emergency number only if provided
+    if (cleanEmergency && (cleanEmergency.length < 10 || cleanEmergency.length > 15)) {
+      return notifyError("Emergency contact number must be 10–15 digits.");
+    }
 
     if (!shirtSize) return notifyError("Please select a T-shirt size.");
 
@@ -128,9 +153,12 @@ export default function FunRunForm() {
         age: String(age).trim(),
         address: address.trim(),
 
-        // ✅ NEW: include in payload
-        contactNumber: contactNumber.trim(),
-        altContactNumber: altContactNumber.trim(), // optional
+        // ✅ send cleaned numbers
+        contactNumber: cleanContact,
+
+        // ✅ emergency fields
+        emergencyName: emName,
+        emergencyContactNumber: cleanEmergency,
 
         shirtSize: finalShirtSize,
         payment: {
@@ -147,7 +175,6 @@ export default function FunRunForm() {
         body: JSON.stringify(payload),
       });
 
-      // ✅ show submitted popup, then ask if submit another
       notifySubmitted();
     } catch (err) {
       notifyError("Submit failed. Please try again.");
@@ -161,8 +188,11 @@ export default function FunRunForm() {
       <div style={styles.card}>
         <div style={styles.headerBar} />
         <div style={styles.header}>
-          <h2 style={styles.title}>Mapandan Eagles Club Fun Run</h2>
-          <p style={styles.subtitle}>Please fill out the form. Fields marked * are required.</p>
+          {/* ✅ DO NOT REMOVE TITLE */}
+          <h2 style={styles.title}>Batik Inarom Mapandan 2026</h2>
+          <p style={styles.subtitle}>
+            Please fill out the form. Fields marked * are required.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -197,7 +227,7 @@ export default function FunRunForm() {
             <div style={styles.inputWrap}>
               <input
                 value={age}
-                onChange={(e) => setAge(e.target.value)}
+                onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
                 style={styles.input}
                 placeholder="Short answer text"
                 inputMode="numeric"
@@ -216,27 +246,47 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          {/* ✅ NEW: Contact Number fields */}
-          <Field label="Contact Number" required>
+          <Field
+            label="Contact Number"
+            required
+            helper="Numbers only (10–15 digits). Example: 09123456789"
+          >
             <div style={styles.inputWrap}>
               <input
                 value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
+                onChange={(e) => setContactNumber(e.target.value.replace(/\D/g, ""))}
                 style={styles.input}
-                placeholder="e.g. 09xxxxxxxxx"
-                inputMode="tel"
+                placeholder="e.g. 09123456789"
+                inputMode="numeric"
               />
             </div>
           </Field>
 
-          <Field label="Alternate Contact Number (Optional)">
+          {/* ✅ Emergency Contact Section */}
+          <Field label="In Case of Emergency: Name (Optional)">
             <div style={styles.inputWrap}>
               <input
-                value={altContactNumber}
-                onChange={(e) => setAltContactNumber(e.target.value)}
+                value={emergencyName}
+                onChange={(e) => setEmergencyName(e.target.value)}
                 style={styles.input}
-                placeholder="e.g. guardian/emergency number"
-                inputMode="tel"
+                placeholder="e.g. Maria Santos"
+              />
+            </div>
+          </Field>
+
+          <Field
+            label="In Case of Emergency: Contact Number (Optional)"
+            helper="Numbers only (10–15 digits). Fill together with Emergency Name."
+          >
+            <div style={styles.inputWrap}>
+              <input
+                value={emergencyContactNumber}
+                onChange={(e) =>
+                  setEmergencyContactNumber(e.target.value.replace(/\D/g, ""))
+                }
+                style={styles.input}
+                placeholder="e.g. 09123456789"
+                inputMode="numeric"
               />
             </div>
           </Field>
@@ -252,7 +302,9 @@ export default function FunRunForm() {
                     checked={shirtSize === s}
                     onChange={() => setShirtSize(s)}
                   />
-                  <span style={{ marginLeft: 8 }}>{s === "OTHER" ? "Other:" : s}</span>
+                  <span style={{ marginLeft: 8 }}>
+                    {s === "OTHER" ? "Other:" : s}
+                  </span>
 
                   {s === "OTHER" && shirtSize === "OTHER" && (
                     <input
@@ -276,7 +328,9 @@ export default function FunRunForm() {
               <div style={styles.uploadLeft}>
                 <div style={styles.uploadTitle}>Payment proof</div>
                 <div style={styles.uploadSub}>
-                  {paymentFile ? `Selected: ${paymentFile.name}` : "No file selected"}
+                  {paymentFile
+                    ? `Selected: ${paymentFile.name}`
+                    : "No file selected"}
                 </div>
               </div>
 
@@ -355,7 +409,6 @@ export default function FunRunForm() {
 
                   <button
                     onClick={() => {
-                      // keeps the "no refresh + no upload bug" behavior
                       resetForm();
                       closeModal();
                     }}
@@ -388,6 +441,7 @@ function Field({ label, required, children, helper }) {
   );
 }
 
+// ✅ styles unchanged (same as yours)
 const styles = {
   page: {
     minHeight: "100vh",
@@ -400,7 +454,6 @@ const styles = {
     fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial",
     color: "#202124",
   },
-
   card: {
     width: "100%",
     maxWidth: 760,
@@ -410,15 +463,11 @@ const styles = {
     overflow: "hidden",
     border: "1px solid #ececec",
   },
-
   headerBar: { height: 12, background: "#673ab7" },
-
   header: { padding: "18px 22px 10px 22px" },
   title: { margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: -0.2 },
   subtitle: { margin: "6px 0 0 0", color: "#5f6368", fontSize: 13 },
-
   form: { padding: "8px 22px 22px 22px", display: "grid", gap: 14 },
-
   fieldCard: {
     border: "1px solid #e6e6e6",
     borderRadius: 12,
@@ -426,13 +475,10 @@ const styles = {
     background: "#fff",
     transition: "box-shadow .15s ease, border-color .15s ease",
   },
-
   labelRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
   label: { fontSize: 14, fontWeight: 600 },
   req: { color: "#d93025", fontWeight: 700 },
-
   helper: { marginTop: 8, fontSize: 12, color: "#5f6368" },
-
   inputWrap: {
     border: "1px solid #dadce0",
     borderRadius: 10,
@@ -442,7 +488,6 @@ const styles = {
     gap: 10,
     background: "#fff",
   },
-
   input: {
     width: "100%",
     border: "none",
@@ -450,10 +495,8 @@ const styles = {
     fontSize: 14,
     background: "transparent",
   },
-
   radioGroup: { display: "grid", gap: 10, marginTop: 2 },
   radioRow: { display: "flex", alignItems: "center", gap: 10 },
-
   uploadBox: {
     border: "1px dashed #c7c7c7",
     borderRadius: 12,
@@ -464,11 +507,9 @@ const styles = {
     justifyContent: "space-between",
     gap: 10,
   },
-
   uploadLeft: { display: "grid", gap: 4 },
   uploadTitle: { fontWeight: 600, fontSize: 13 },
   uploadSub: { fontSize: 12, color: "#5f6368" },
-
   button: {
     background: "#673ab7",
     color: "#fff",
@@ -480,7 +521,6 @@ const styles = {
     fontWeight: 700,
     boxShadow: "0 1px 2px rgba(0,0,0,.12)",
   },
-
   ghostBtn: {
     background: "#fff",
     color: "#673ab7",
@@ -491,7 +531,6 @@ const styles = {
     fontSize: 14,
     fontWeight: 700,
   },
-
   modalOverlay: {
     position: "fixed",
     inset: 0,
@@ -502,7 +541,6 @@ const styles = {
     zIndex: 9999,
     padding: 20,
   },
-
   modal: {
     width: "100%",
     maxWidth: 420,
