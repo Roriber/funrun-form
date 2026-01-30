@@ -19,11 +19,11 @@ const CATEGORY_OPTIONS = [
   { label: "Other", value: "OTHER" },
 ];
 
-// ✅ NEW: RUN CATEGORY / DISTANCE (with colors)
+// ✅ RUN CATEGORY / DISTANCE (with colors + AMOUNT)
 const DISTANCE_OPTIONS = [
-  { label: "3KM", value: "3KM", color: "#188038" }, // green
-  { label: "5KM", value: "5KM", color: "#1a73e8" }, // blue
-  { label: "10KM", value: "10KM", color: "#d93025" }, // red
+  { label: "3KM", value: "3KM", color: "#188038", amount: 350 }, // green
+  { label: "5KM", value: "5KM", color: "#1a73e8", amount: 400 }, // blue
+  { label: "10KM", value: "10KM", color: "#d93025", amount: 500 }, // red
 ];
 
 function fileToBase64(file) {
@@ -49,7 +49,7 @@ export default function FunRunForm() {
   const [categoryBase, setCategoryBase] = useState("");
   const [categoryOther, setCategoryOther] = useState("");
 
-  // ✅ NEW: Distance
+  // ✅ Distance
   const [distance, setDistance] = useState("");
 
   // ✅ Main contact
@@ -129,6 +129,12 @@ export default function FunRunForm() {
     return categoryOther.trim() ? `OTHER: ${categoryOther.trim()}` : "OTHER";
   }, [categoryBase, categoryOther]);
 
+  // ✅ selected amount for UI display only
+  const selectedAmount = useMemo(() => {
+    const found = DISTANCE_OPTIONS.find((d) => d.value === distance);
+    return found ? found.amount : "";
+  }, [distance]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     closeModal();
@@ -148,7 +154,7 @@ export default function FunRunForm() {
       return notifyError("Please type your Group / Section in 'Other'.");
     }
 
-    // ✅ NEW: Distance validation
+    // ✅ Distance validation
     if (!distance) return notifyError("Please select your Run Category (3KM / 5KM / 10KM).");
 
     // ✅ Contact number validation (numbers only, 10–15)
@@ -200,7 +206,7 @@ export default function FunRunForm() {
         categoryOther: categoryOther.trim(),
         categoryDisplay,
 
-        // ✅ NEW: distance
+        // ✅ distance
         distance, // "3KM" | "5KM" | "10KM"
 
         contactNumber: cleanContact,
@@ -258,7 +264,7 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          {/* ✅ RENAMED label: Group / Section (still uses categoryBase internally) */}
+          {/* ✅ Group / Organization (do not change label) */}
           <Field label="Group / Organization" required>
             <div style={styles.inputWrap}>
               <select
@@ -294,8 +300,16 @@ export default function FunRunForm() {
             )}
           </Field>
 
-          {/* ✅ NEW: Run Category / Distance (colored) */}
-          <Field label="Category" required helper="Select: 3KM (Green), 5KM (Blue), 10KM (Red)">
+          {/* ✅ Category (do not change label) + amounts shown in UI only */}
+          <Field
+            label="Category"
+            required
+            helper={
+              distance
+                ? `Selected: ${distance} — ₱${selectedAmount}`
+                : "Select: 3KM (Green) ₱350, 5KM (Blue) ₱400, 10KM (Red) ₱500"
+            }
+          >
             <div style={styles.radioGroup}>
               {DISTANCE_OPTIONS.map((d) => {
                 const checked = distance === d.value;
@@ -328,9 +342,26 @@ export default function FunRunForm() {
                         borderRadius: 999,
                         border: `1px solid ${d.color}`,
                         background: `${d.color}14`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 10,
                       }}
                     >
-                      {d.label}
+                      <span>{d.label}</span>
+
+                      <span
+                        style={{
+                          fontWeight: 900,
+                          color: "#202124",
+                          background: "#fff",
+                          borderRadius: 999,
+                          padding: "2px 10px",
+                          border: "1px solid #dadce0",
+                          fontSize: 12,
+                        }}
+                      >
+                        ₱{d.amount}
+                      </span>
                     </span>
                   </label>
                 );
