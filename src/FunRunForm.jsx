@@ -11,6 +11,10 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 const CATEGORY_OPTIONS = [
   { label: "MEC", value: "MEC" },
   { label: "LGU", value: "LGU" },
+
+  // ✅ NEW GROUP
+  { label: "Medarlo Cafe", value: "MEDARLO CAFE" },
+
   { label: "Town Center", value: "TOWN CENTER" },
   { label: "Zumbanatics", value: "ZUMBANATICS" },
   { label: "Barangay", value: "BARANGAY" },
