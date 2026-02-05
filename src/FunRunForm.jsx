@@ -219,6 +219,27 @@ export default function FunRunForm() {
         body: JSON.stringify(payload),
       });
 
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        mode: "cors", // ✅ IMPORTANT (not no-cors)
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // ✅ keep text/plain to avoid preflight
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      let out = null;
+
+      try {
+        out = JSON.parse(text);
+      } catch {
+        // if server returned non-json
+      }
+
+      if (!out || out.ok !== true) {
+        const msg = out?.error || "Submit failed (server did not return ok:true).";
+        throw new Error(msg);
+      }
+
       notifySubmitted();
     } catch (err) {
       notifyError("Submit failed. Please try again.");
