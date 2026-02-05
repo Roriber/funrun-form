@@ -5,8 +5,10 @@ import { format } from "date-fns";
 const GAS_URL = import.meta.env.VITE_GAS_URL; // Apps Script /exec URL
 const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || "";
 
-// ✅ Upload size check (recommended). Set to 0 for "no check"
-const MAX_UPLOAD_MB = 10;
+// ✅ Upload size check
+// 0 = NO LIMIT (frontend)
+// Note: super large files can still fail due to Apps Script limits/timeouts.
+const MAX_UPLOAD_MB = 0;
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 
@@ -173,7 +175,8 @@ export default function FunRunForm() {
 
     if (!paymentFile) return notifyError("Please upload your payment proof.");
 
-    // ✅ optional size check
+    // ✅ NO LIMIT upload check (frontend)
+    // if MAX_UPLOAD_MB is 0, skip file size validation
     if (MAX_UPLOAD_MB && paymentFile.size > MAX_UPLOAD_MB * 1024 * 1024) {
       return notifyError(`File too large. Please upload under ${MAX_UPLOAD_MB}MB.`);
     }
@@ -208,7 +211,7 @@ export default function FunRunForm() {
         },
       };
 
-      // ✅ IMPORTANT: ONLY ONE POST (no-cors)
+      // ✅ only ONE POST
       await fetch(GAS_URL, {
         method: "POST",
         mode: "no-cors",
@@ -455,15 +458,7 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          <Field
-            label="Upload Payment"
-            required
-            helper={
-              MAX_UPLOAD_MB
-                ? `Upload a screenshot/photo/PDF of payment proof. (Max ${MAX_UPLOAD_MB}MB)`
-                : "Upload a screenshot/photo/PDF of payment proof."
-            }
-          >
+          <Field label="Upload Payment" required helper="Upload a screenshot/photo/PDF of payment proof.">
             <div style={styles.uploadBox}>
               <div style={styles.uploadLeft}>
                 <div style={styles.uploadTitle}>Payment proof</div>
