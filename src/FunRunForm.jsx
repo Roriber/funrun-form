@@ -2,19 +2,18 @@ import React, { useMemo, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import { format } from "date-fns";
 
-const GAS_URL = import.meta.env.VITE_GAS_URL; // your Apps Script /exec URL
-const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || ""; // optional
+const GAS_URL = import.meta.env.VITE_GAS_URL; // Apps Script /exec URL
+const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || "";
+
+// ✅ Upload size check (recommended). Set to 0 for "no check"
+const MAX_UPLOAD_MB = 10;
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 
-// ✅ GROUP/SECTION
 const CATEGORY_OPTIONS = [
   { label: "MEC", value: "MEC" },
   { label: "LGU", value: "LGU" },
-
-  // ✅ NEW GROUP
   { label: "Medarlo Cafe", value: "MEDARLO CAFE" },
-
   { label: "Town Center", value: "TOWN CENTER" },
   { label: "Zumbanatics", value: "ZUMBANATICS" },
   { label: "Barangay", value: "BARANGAY" },
@@ -23,7 +22,6 @@ const CATEGORY_OPTIONS = [
   { label: "Other", value: "OTHER" },
 ];
 
-// ✅ RUN CATEGORY / DISTANCE (with colors + AMOUNT)
 const DISTANCE_OPTIONS = [
   { label: "3KM", value: "3KM", color: "#188038", amount: 350 },
   { label: "5KM", value: "5KM", color: "#1a73e8", amount: 400 },
@@ -49,17 +47,13 @@ export default function FunRunForm() {
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
 
-  // ✅ Group/Section fields
   const [categoryBase, setCategoryBase] = useState("");
   const [categoryOther, setCategoryOther] = useState("");
 
-  // ✅ Distance
   const [distance, setDistance] = useState("");
 
-  // ✅ Main contact
   const [contactNumber, setContactNumber] = useState("");
 
-  // ✅ Emergency contact
   const [emergencyName, setEmergencyName] = useState("");
   const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
 
@@ -70,13 +64,11 @@ export default function FunRunForm() {
   const isMobile = window.matchMedia("(max-width: 640px)").matches;
   const [loading, setLoading] = useState(false);
 
-  // ✅ file input ref
   const fileInputRef = useRef(null);
 
-  // ✅ modal flow
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalStep, setModalStep] = useState("message");
-  const [modalType, setModalType] = useState("success");
+  const [modalStep, setModalStep] = useState("message"); // "message" | "askAgain"
+  const [modalType, setModalType] = useState("success"); // "success" | "error"
   const [modalText, setModalText] = useState("");
 
   const closeModal = () => {
@@ -136,6 +128,7 @@ export default function FunRunForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (loading) return; // ✅ prevent double submit
     closeModal();
 
     if (!GAS_URL) return notifyError("Missing VITE_GAS_URL in your .env file.");
@@ -147,9 +140,9 @@ export default function FunRunForm() {
     if (!String(age).trim()) return notifyError("Please enter your age.");
     if (!address.trim()) return notifyError("Please enter your address.");
 
-    if (!categoryBase) return notifyError("Please select your Group / Section.");
+    if (!categoryBase) return notifyError("Please select your Group / Organization.");
     if (categoryBase === "OTHER" && !categoryOther.trim()) {
-      return notifyError("Please type your Group / Section in 'Other'.");
+      return notifyError("Please type your Group / Organization in 'Other'.");
     }
 
     if (!distance) return notifyError("Please select your Run Category (3KM / 5KM / 10KM).");
@@ -180,8 +173,10 @@ export default function FunRunForm() {
 
     if (!paymentFile) return notifyError("Please upload your payment proof.");
 
-    // ✅ REMOVED: upload size limit validation (NO LIMIT)
-    // Note: very large files can still fail due to Apps Script limits/timeouts.
+    // ✅ optional size check
+    if (MAX_UPLOAD_MB && paymentFile.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      return notifyError(`File too large. Please upload under ${MAX_UPLOAD_MB}MB.`);
+    }
 
     setLoading(true);
     try {
@@ -205,6 +200,7 @@ export default function FunRunForm() {
         emergencyContactNumber: cleanEmergency,
 
         shirtSize: finalShirtSize,
+
         payment: {
           name: paymentFile.name,
           mimeType: paymentFile.type || "application/octet-stream",
@@ -212,33 +208,13 @@ export default function FunRunForm() {
         },
       };
 
+      // ✅ IMPORTANT: ONLY ONE POST (no-cors)
       await fetch(GAS_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload),
       });
-
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        mode: "cors", // ✅ IMPORTANT (not no-cors)
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // ✅ keep text/plain to avoid preflight
-        body: JSON.stringify(payload),
-      });
-
-      const text = await res.text();
-      let out = null;
-
-      try {
-        out = JSON.parse(text);
-      } catch {
-        // if server returned non-json
-      }
-
-      if (!out || out.ok !== true) {
-        const msg = out?.error || "Submit failed (server did not return ok:true).";
-        throw new Error(msg);
-      }
 
       notifySubmitted();
     } catch (err) {
@@ -482,7 +458,11 @@ export default function FunRunForm() {
           <Field
             label="Upload Payment"
             required
-            helper="Upload a screenshot/photo/PDF of payment proof."
+            helper={
+              MAX_UPLOAD_MB
+                ? `Upload a screenshot/photo/PDF of payment proof. (Max ${MAX_UPLOAD_MB}MB)`
+                : "Upload a screenshot/photo/PDF of payment proof."
+            }
           >
             <div style={styles.uploadBox}>
               <div style={styles.uploadLeft}>
