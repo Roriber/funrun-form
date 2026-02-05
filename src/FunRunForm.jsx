@@ -7,7 +7,7 @@ const FORM_SECRET = import.meta.env.VITE_FORM_SECRET || ""; // optional
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "OTHER"];
 
-// ✅ GROUP/SECTION (same values as before so your Apps Script routing still works)
+// ✅ GROUP/SECTION
 const CATEGORY_OPTIONS = [
   { label: "MEC", value: "MEC" },
   { label: "LGU", value: "LGU" },
@@ -25,9 +25,9 @@ const CATEGORY_OPTIONS = [
 
 // ✅ RUN CATEGORY / DISTANCE (with colors + AMOUNT)
 const DISTANCE_OPTIONS = [
-  { label: "3KM", value: "3KM", color: "#188038", amount: 350 }, // green
-  { label: "5KM", value: "5KM", color: "#1a73e8", amount: 400 }, // blue
-  { label: "10KM", value: "10KM", color: "#d93025", amount: 500 }, // red
+  { label: "3KM", value: "3KM", color: "#188038", amount: 350 },
+  { label: "5KM", value: "5KM", color: "#1a73e8", amount: 400 },
+  { label: "10KM", value: "10KM", color: "#d93025", amount: 500 },
 ];
 
 function fileToBase64(file) {
@@ -49,7 +49,7 @@ export default function FunRunForm() {
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
 
-  // ✅ Group/Section fields (still named categoryBase/categoryOther for backend compatibility)
+  // ✅ Group/Section fields
   const [categoryBase, setCategoryBase] = useState("");
   const [categoryOther, setCategoryOther] = useState("");
 
@@ -70,13 +70,13 @@ export default function FunRunForm() {
   const isMobile = window.matchMedia("(max-width: 640px)").matches;
   const [loading, setLoading] = useState(false);
 
-  // ✅ file input ref (fix upload bug without refresh)
+  // ✅ file input ref
   const fileInputRef = useRef(null);
 
   // ✅ modal flow
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalStep, setModalStep] = useState("message"); // "message" | "askAgain"
-  const [modalType, setModalType] = useState("success"); // "success" | "error"
+  const [modalStep, setModalStep] = useState("message");
+  const [modalType, setModalType] = useState("success");
   const [modalText, setModalText] = useState("");
 
   const closeModal = () => {
@@ -106,12 +106,9 @@ export default function FunRunForm() {
 
     setCategoryBase("");
     setCategoryOther("");
-
-    // ✅ reset distance
     setDistance("");
 
     setContactNumber("");
-
     setEmergencyName("");
     setEmergencyContactNumber("");
 
@@ -127,13 +124,11 @@ export default function FunRunForm() {
     return otherSize.trim() ? `OTHER: ${otherSize.trim()}` : "OTHER";
   }, [shirtSize, otherSize]);
 
-  // ✅ for display/log only (optional)
   const categoryDisplay = useMemo(() => {
     if (categoryBase !== "OTHER") return categoryBase;
     return categoryOther.trim() ? `OTHER: ${categoryOther.trim()}` : "OTHER";
   }, [categoryBase, categoryOther]);
 
-  // ✅ selected amount for UI display only
   const selectedAmount = useMemo(() => {
     const found = DISTANCE_OPTIONS.find((d) => d.value === distance);
     return found ? found.amount : "";
@@ -152,23 +147,19 @@ export default function FunRunForm() {
     if (!String(age).trim()) return notifyError("Please enter your age.");
     if (!address.trim()) return notifyError("Please enter your address.");
 
-    // ✅ Group/Section validation
     if (!categoryBase) return notifyError("Please select your Group / Section.");
     if (categoryBase === "OTHER" && !categoryOther.trim()) {
       return notifyError("Please type your Group / Section in 'Other'.");
     }
 
-    // ✅ Distance validation
     if (!distance) return notifyError("Please select your Run Category (3KM / 5KM / 10KM).");
 
-    // ✅ Contact number validation (numbers only, 10–15)
     const cleanContact = contactNumber.replace(/\D/g, "");
     if (!cleanContact) return notifyError("Please enter your contact number.");
     if (cleanContact.length < 10 || cleanContact.length > 15) {
       return notifyError("Contact number must be 10–15 digits.");
     }
 
-    // ✅ Emergency number validation (numbers only, optional)
     const emName = emergencyName.trim();
     const cleanEmergency = emergencyContactNumber.replace(/\D/g, "");
 
@@ -183,16 +174,14 @@ export default function FunRunForm() {
     }
 
     if (!shirtSize) return notifyError("Please select a T-shirt size.");
-
     if (shirtSize === "OTHER" && !otherSize.trim()) {
       return notifyError("Please type your 'Other' shirt size.");
     }
 
     if (!paymentFile) return notifyError("Please upload your payment proof.");
 
-    if (paymentFile.size > 5 * 1024 * 1024) {
-      return notifyError("File too large. Please upload under 5MB.");
-    }
+    // ✅ REMOVED: upload size limit validation (NO LIMIT)
+    // Note: very large files can still fail due to Apps Script limits/timeouts.
 
     setLoading(true);
     try {
@@ -205,16 +194,13 @@ export default function FunRunForm() {
         age: String(age).trim(),
         address: address.trim(),
 
-        // ✅ group routing fields (backend-compatible)
         categoryBase,
         categoryOther: categoryOther.trim(),
         categoryDisplay,
 
-        // ✅ distance
-        distance, // "3KM" | "5KM" | "10KM"
+        distance,
 
         contactNumber: cleanContact,
-
         emergencyName: emName,
         emergencyContactNumber: cleanEmergency,
 
@@ -246,7 +232,6 @@ export default function FunRunForm() {
       <div style={styles.card}>
         <div style={styles.headerBar} />
         <div style={styles.header}>
-          {/* ✅ DO NOT REMOVE TITLE */}
           <h2 style={styles.title}>Batik Inarom Mapandan 2026</h2>
           <p style={styles.subtitle}>Please fill out the form. Fields marked * are required.</p>
         </div>
@@ -268,7 +253,6 @@ export default function FunRunForm() {
             </div>
           </Field>
 
-          {/* ✅ Group / Organization (do not change label) */}
           <Field label="Group / Organization" required>
             <div style={styles.inputWrap}>
               <select
@@ -304,7 +288,6 @@ export default function FunRunForm() {
             )}
           </Field>
 
-          {/* ✅ Category (do not change label) + amounts shown in UI only */}
           <Field
             label="Category"
             required
@@ -478,7 +461,7 @@ export default function FunRunForm() {
           <Field
             label="Upload Payment"
             required
-            helper="Upload a screenshot/photo/PDF of payment proof. (Max 5MB)"
+            helper="Upload a screenshot/photo/PDF of payment proof."
           >
             <div style={styles.uploadBox}>
               <div style={styles.uploadLeft}>
@@ -589,7 +572,6 @@ function Field({ label, required, children, helper }) {
   );
 }
 
-// ✅ styles unchanged (same as yours)
 const styles = {
   page: {
     minHeight: "100vh",
